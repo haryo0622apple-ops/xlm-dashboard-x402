@@ -72,7 +72,7 @@ else:
 col1, col2, col3 = st.columns(3)
 col1.metric("XLM価格 (JPY)", f"{current_price:.2f}円", f"{change_24h:.2f}%")
 col2.metric("RSI", f"{rsi:.2f}" if rsi else "N/A")
-col3.write("トレンド:", trend)
+col3.write(f"トレンド: {trend}")  # ← f文字列で安全
 
 # --- チャート表示 ---
 st.subheader("価格チャート（過去7日）")
