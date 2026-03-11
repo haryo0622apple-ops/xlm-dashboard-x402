@@ -3,22 +3,43 @@ import streamlit as st
 
 st.title("XLM x402 投資家向けダッシュボード")
 
-# --- 価格と24h変動 ---
+# --- 安全に価格と24h変動を取得 ---
 def get_xlm_data():
     url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {"ids":"stellar", "vs_currencies":"jpy", "include_24hr_change":"true"}
-    data = requests.get(url, params=params).json()
-    return data["stellar"]["jpy"], data["stellar"]["jpy_24h_change"]
+    params = {
+        "ids": "stellar",
+        "vs_currencies": "jpy",
+        "include_24hr_change": "true"
+    }
+    try:
+        data = requests.get(url, params=params, timeout=10).json()
+        # もしstellarキーがなければ0を返す
+        if "stellar" in data:
+            price = data["stellar"].get("jpy", 0)
+            change_24h = data["stellar"].get("jpy_24h_change", 0)
+            return price, change_24h
+        else:
+            return 0, 0
+    except Exception as e:
+        # APIが使えない場合も落ちない
+        print("API取得エラー:", e)
+        return 0, 0
 
-# --- 過去データ（RSI用） ---
+# --- 過去データ取得（RSI用） ---
 def get_xlm_prices():
-    url = "https://api.coingecko.com/api/v3/coins/stellar/market_chart"
-    params = {"vs_currency":"jpy","days":"1","interval":"hourly"}
-    data = requests.get(url, params=params).json()
-    return [p[1] for p in data["prices"]]
+    try:
+        url = "https://api.coingecko.com/api/v3/coins/stellar/market_chart"
+        params = {"vs_currency":"jpy","days":"1","interval":"hourly"}
+        data = requests.get(url, params=params, timeout=10).json()
+        return [p[1] for p in data.get("prices", [])]
+    except Exception as e:
+        print("過去データ取得エラー:", e)
+        return []
 
 # --- RSI計算 ---
 def get_rsi(prices, period=14):
+    if len(prices) < period:
+        return 50  # データが足りない場合は中立値
     deltas = [prices[i+1]-prices[i] for i in range(len(prices)-1)]
     gains = [max(d,0) for d in deltas]
     losses = [abs(min(d,0)) for d in deltas]
